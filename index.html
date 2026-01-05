@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Today's Todo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: "Pretendard", "Apple SD Gothic Neo", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .todo-app {
+      background: #ffffff;
+      width: 360px;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      text-align: center;
+      font-size: 22px;
+      color: #333;
+    }
+
+    .input-area {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .input-area input {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      outline: none;
+      font-size: 14px;
+    }
+
+    .input-area button {
+      border: none;
+      border-radius: 12px;
+      padding: 0 16px;
+      font-size: 18px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+
+    .input-area button:hover {
+      transform: scale(1.05);
+      opacity: 0.9;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      background: #f7f7f7;
+      animation: fadeIn 0.3s ease;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    li.done {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+
+    li span {
+      flex: 1;
+      font-size: 14px;
+      color: #333;
+    }
+
+    li input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="todo-app">
+    <h1>오늘의 할 일</h1>
+
+    <div class="input-area">
+      <input type="text" id="todoInput" placeholder="할 일을 입력하세요" />
+      <button id="addBtn">+</button>
+    </div>
+
+    <ul id="todoList"></ul>
+  </div>
+
+  <script>
+    const input = document.getElementById("todoInput");
+    const addBtn = document.getElementById("addBtn");
+    const list = document.getElementById("todoList");
+
+    function addTodo() {
+      const text = input.value.trim();
+      if (!text) return;
+
+      const li = document.createElement("li");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+
+      const span = document.createElement("span");
+      span.textContent = text;
+
+      checkbox.addEventListener("change", () => {
+        li.classList.add("done");
+        setTimeout(() => li.remove(), 300);
+      });
+
+      li.appendChild(checkbox);
+      li.appendChild(span);
+      list.appendChild(li);
+
+      input.value = "";
+    }
+
+    addBtn.addEventListener("click", addTodo);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addTodo();
+    });
+  </script>
+</body>
+</html>
