@@ -58,40 +58,115 @@ cp .env.example .env
 
 # .env 파일 편집하여 API 키 추가
 # OPENAI_API_KEY=your-openai-api-key-here
-# ANTHROPIC_API_KEY=your-anthropic-api-key-here (향후 필요)
+# ANTHROPIC_API_KEY=your-anthropic-api-key-here
 ```
 
 ### 4. 사용 방법
 
-#### 옵션 1: Python 스크립트로 실행
+#### ⭐ 권장: main.py로 전체 파이프라인 실행
+
+**가장 간단한 방법!** 한 명령어로 MP4 → SRT 변환:
 
 ```bash
-# 비디오 파일을 data/input/ 에 복사
-cp your_video.mp4 data/input/
+# 기본 사용 (한국어)
+python main.py -i data/input/my_video.mp4
 
-# Generator 에이전트 실행
-python agents/generator.py data/input/your_video.mp4 data/temp/raw_subtitle.json
+# 출력 경로 지정
+python main.py -i video.mp4 -o output/subtitles.srt
+
+# 영어 비디오
+python main.py -i video.mp4 -l en
+
+# 임시 파일 유지 (디버깅용)
+python main.py -i video.mp4 --keep-temp
+
+# 상세 로그 출력
+python main.py -i video.mp4 -v
 ```
 
-#### 옵션 2: Python 코드에서 사용
+**실행 예시:**
+```
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║   🎬 YouTube Subtitle Generation & Correction System 🎬     ║
+║                                                              ║
+║   Generator → Analyzer → Fixer → Perfect Subtitles!         ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+
+📹 Input video: data/input/my_video.mp4
+📏 File size: 45.23 MB
+🌐 Language: ko
+📄 Output SRT: data/output/my_video.srt
+
+============================================================
+  📌 Step 1/3: Generator - Audio to Text (Whisper API)
+============================================================
+
+🎙️  Extracting audio and transcribing...
+✅ Success!
+   - Segments: 120
+   - Duration: 300.5s (5.0 minutes)
+
+============================================================
+  📌 Step 2/3: Analyzer - Context Analysis (Claude API)
+============================================================
+
+🔍 Analyzing context and vocabulary...
+✅ Success!
+   - Topic: 파이썬 프로그래밍 기초 강의
+   - Domain: 기술/IT
+   - Technical terms: 15
+   - Proper nouns: 5
+
+============================================================
+  📌 Step 3/3: Fixer - Error Correction (Claude API)
+============================================================
+
+✏️  Correcting errors and generating SRT...
+✅ Success!
+   - Total segments: 120
+   - Corrected: 45 (37.5%)
+
+============================================================
+  🎉 Pipeline Complete!
+============================================================
+
+📄 Next steps:
+   1. Review the subtitle file: data/output/my_video.srt
+   2. Apply subtitles to your video
+   3. Enjoy your perfectly subtitled video! 🎬
+```
+
+#### 옵션 2: Python 코드에서 사용 (고급)
+
+개별 에이전트를 세밀하게 제어하고 싶을 때:
 
 ```python
 from agents.generator import generate_subtitles
+from agents.analyzer import analyze_subtitles
+from agents.fixer import fix_subtitles
 
-# 자막 생성
-result = generate_subtitles(
-    video_path="data/input/your_video.mp4",
-    output_json_path="data/temp/raw_subtitle.json",
-    language="ko"
+# 1단계: 자막 생성
+raw = generate_subtitles(
+    video_path="data/input/video.mp4",
+    output_json_path="data/temp/raw.json"
 )
 
-# 결과 확인
-print(f"총 {len(result['segments'])} 개의 자막 생성됨")
-print(f"영상 길이: {result['duration']:.2f}초")
+# 2단계: 문맥 분석
+context = analyze_subtitles(
+    raw_subtitle_path="data/temp/raw.json",
+    output_json_path="data/temp/context.json"
+)
 
-# 첫 3개 자막 출력
-for seg in result['segments'][:3]:
-    print(f"[{seg['start']:.2f}s - {seg['end']:.2f}s] {seg['text']}")
+# 3단계: 오타 교정
+result = fix_subtitles(
+    raw_subtitle_path="data/temp/raw.json",
+    context_metadata_path="data/temp/context.json",
+    output_srt_path="data/output/video.srt"
+)
+
+print(f"✅ 완료: {result['output_srt']}")
 ```
 
 ---
@@ -119,8 +194,11 @@ for seg in result['segments'][:3]:
 │   └── config.yaml        # 설정 파일
 │
 ├── tests/                 # 테스트 코드
-│   └── test_generator.py
+│   ├── test_generator.py
+│   ├── test_analyzer.py
+│   └── test_fixer.py
 │
+├── main.py                # ⭐ 메인 CLI 스크립트 (전체 파이프라인)
 ├── ARCHITECTURE.md        # 시스템 아키텍처 설계 문서
 ├── requirements.txt       # Python 의존성
 └── README.md             # 이 파일
@@ -524,9 +602,9 @@ paths:
   - [x] SRT 파일 생성
   - [x] 테스트 코드
 
-- [ ] **Phase 4**: 통합 및 최적화
-  - [ ] 메인 파이프라인 스크립트 (main.py)
-  - [ ] CLI 인터페이스
+- [x] **Phase 4**: 통합 및 최적화 (진행 중)
+  - [x] 메인 파이프라인 스크립트 (main.py) ⭐
+  - [x] CLI 인터페이스 ⭐
   - [ ] 배치 처리 (여러 비디오)
   - [ ] 대용량 파일 청킹
   - [ ] 웹 UI (선택사항)
