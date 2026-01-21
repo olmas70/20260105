@@ -1,0 +1,55 @@
+# YouTube Subtitle System Configuration
+
+# OpenAI Configuration
+openai:
+  api_key: ${OPENAI_API_KEY}  # Set via environment variable
+  whisper_model: "whisper-1"
+  language: "ko"  # Korean (auto-detect if null)
+  response_format: "verbose_json"  # Include timestamps
+  temperature: 0  # Deterministic output
+
+# Anthropic Configuration (for Analyzer and Fixer)
+anthropic:
+  api_key: ${ANTHROPIC_API_KEY}  # Set via environment variable
+  model: "claude-3-5-sonnet-20241022"
+  max_tokens: 4096
+  temperature: 0.3
+
+# FFmpeg Configuration
+ffmpeg:
+  audio_format: "wav"
+  sample_rate: 16000  # 16kHz for Whisper
+  channels: 1  # Mono
+  codec: "pcm_s16le"
+
+# File Paths
+paths:
+  input_dir: "data/input"
+  output_dir: "data/output"
+  temp_dir: "data/temp"
+
+# Processing Options
+processing:
+  # Generator options
+  generator:
+    chunk_duration: 600  # Max 10 minutes per chunk (Whisper limit: 25MB)
+    enable_vad: false  # Voice Activity Detection
+
+  # Analyzer options
+  analyzer:
+    min_context_length: 100  # Minimum characters for context analysis
+    extract_technical_terms: true
+    extract_proper_nouns: true
+
+  # Fixer options
+  fixer:
+    fix_spacing: true
+    fix_punctuation: true
+    fix_typos: true
+    min_confidence: 0.7  # Minimum confidence for corrections
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/subtitle_system.log"

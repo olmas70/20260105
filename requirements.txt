@@ -1,0 +1,27 @@
+# YouTube Subtitle Generation and Correction System
+# Python 3.8+
+
+# OpenAI API (Whisper)
+openai>=1.0.0
+
+# Anthropic API (Claude)
+anthropic>=0.18.0
+
+# Audio/Video Processing
+ffmpeg-python>=0.2.0
+
+# Subtitle Format Handling
+pysrt>=1.1.2
+
+# Configuration Management
+PyYAML>=6.0
+
+# Utilities
+python-dotenv>=1.0.0
+
+# Optional: Korean Language Processing
+# py-hanspell>=1.1  # 한글 맞춤법 검사기 (보조적으로 사용)
+
+# Development/Testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
