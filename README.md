@@ -5,11 +5,11 @@
 ## 📋 시스템 개요
 
 **3단계 파이프라인 구조**:
-1. **Generator** - 음성을 텍스트로 변환 (Whisper API)
-2. **Analyzer** - 문맥 파악 및 전문용어 추출 (Claude API) ⚠️ *구현 예정*
+1. **Generator** - 음성을 텍스트로 변환 (Whisper API) ✅
+2. **Analyzer** - 문맥 파악 및 전문용어 추출 (Claude API) ✅
 3. **Fixer** - 오타 교정 및 SRT 생성 (Claude API) ⚠️ *구현 예정*
 
-**현재 구현 상태**: ✅ Generator 에이전트 완료
+**현재 구현 상태**: ✅ Generator, Analyzer 에이전트 완료
 
 ---
 
@@ -20,6 +20,7 @@
 - Python 3.8+
 - FFmpeg (오디오 추출용)
 - OpenAI API Key (Whisper용)
+- Anthropic API Key (Claude용 - Analyzer/Fixer)
 
 #### FFmpeg 설치
 
@@ -101,7 +102,7 @@ for seg in result['segments'][:3]:
 .
 ├── agents/                 # 에이전트 모듈
 │   ├── generator.py       # ✅ Generator 에이전트 (완료)
-│   ├── analyzer.py        # ⚠️ Analyzer 에이전트 (예정)
+│   ├── analyzer.py        # ✅ Analyzer 에이전트 (완료)
 │   └── fixer.py           # ⚠️ Fixer 에이전트 (예정)
 │
 ├── utils/                 # 유틸리티 모듈
@@ -193,17 +194,124 @@ agent.cleanup_temp_files()
 
 ---
 
+## 🔍 Analyzer 에이전트 상세
+
+### 기능
+
+1. **문맥 분석**: 전체 스크립트의 주제와 도메인 파악
+2. **어휘 추출**: 전문용어, 고유명사, 핵심구문 식별
+3. **오류 패턴 예측**: 음성 인식에서 발생 가능한 오류 패턴 분석
+4. **메타데이터 생성**: Fixer가 사용할 문맥 정보 JSON 생성
+
+### 입력
+
+- **파일 형식**: Generator 출력 JSON
+- **필수 필드**: segments (자막 세그먼트 리스트)
+
+### 출력 예시
+
+```json
+{
+  "source_file": "data/input/video.mp4",
+  "total_segments": 50,
+  "total_duration": 300.5,
+  "full_transcript": "안녕하세요 오늘은 파이썬에 대해...",
+  "metadata": {
+    "topic": "파이썬 프로그래밍 기초 강의",
+    "domain": "기술/IT",
+    "language_style": "강의형",
+    "formality": "보통"
+  },
+  "vocabulary": {
+    "technical_terms": ["파이썬", "변수", "데이터타입", "함수", "클래스"],
+    "proper_nouns": ["Python", "VSCode", "GitHub"],
+    "key_phrases": ["알아보겠습니다", "설명하겠습니다"]
+  },
+  "error_patterns": [
+    {
+      "type": "spacing",
+      "examples": ["변수선언 → 변수 선언", "데이터타입 → 데이터 타입"],
+      "correction_guide": "합성어 띄어쓰기 규칙 적용"
+    },
+    {
+      "type": "homophone",
+      "examples": ["설명하겟습니다 → 설명하겠습니다"],
+      "correction_guide": "'-겠-' 어미 교정"
+    }
+  ]
+}
+```
+
+### 사용 방법
+
+#### 방법 1: 스크립트로 실행
+
+```bash
+# Generator 출력을 Analyzer로 분석
+python agents/analyzer.py data/temp/raw_subtitle.json data/temp/context_metadata.json
+```
+
+#### 방법 2: Python 코드에서 사용
+
+```python
+from agents.analyzer import analyze_subtitles
+
+# 문맥 분석
+context = analyze_subtitles(
+    raw_subtitle_path="data/temp/raw_subtitle.json",
+    output_json_path="data/temp/context_metadata.json"
+)
+
+# 결과 확인
+print(f"주제: {context['metadata']['topic']}")
+print(f"도메인: {context['metadata']['domain']}")
+print(f"전문용어: {len(context['vocabulary']['technical_terms'])}개")
+
+# 요약 보기
+from agents.analyzer import AnalyzerAgent
+analyzer = AnalyzerAgent()
+print(analyzer.get_summary(context))
+```
+
+#### 방법 3: 파이프라인 (Generator → Analyzer)
+
+```python
+from agents.generator import generate_subtitles
+from agents.analyzer import analyze_subtitles
+
+# 1단계: 자막 생성
+raw_subtitle = generate_subtitles(
+    video_path="data/input/video.mp4",
+    output_json_path="data/temp/raw_subtitle.json"
+)
+
+# 2단계: 문맥 분석
+context = analyze_subtitles(
+    raw_subtitle_path="data/temp/raw_subtitle.json",
+    output_json_path="data/temp/context_metadata.json"
+)
+
+print(f"✅ 파이프라인 완료!")
+print(f"  - 자막: {len(raw_subtitle['segments'])}개")
+print(f"  - 주제: {context['metadata']['topic']}")
+```
+
+---
+
 ## 🧪 테스트
 
 ```bash
 # 모든 테스트 실행
 pytest tests/ -v
 
-# 특정 테스트만 실행
+# Generator 테스트
 pytest tests/test_generator.py -v
 
+# Analyzer 테스트
+pytest tests/test_analyzer.py -v
+
 # 실제 API를 사용한 통합 테스트 (API 키 필요)
-OPENAI_API_KEY=your-key pytest tests/test_generator.py -v
+OPENAI_API_KEY=your-key ANTHROPIC_API_KEY=your-key pytest tests/ -v
 ```
 
 ---
@@ -233,8 +341,12 @@ paths:
 ## 📊 비용 예상
 
 **10분 분량 비디오 기준**:
-- Whisper API: $0.006/분 × 10분 = **$0.06**
-- 매우 저렴한 비용으로 고품질 자막 생성 가능
+- **Generator (Whisper API)**: $0.006/분 × 10분 = **$0.06**
+- **Analyzer (Claude API)**: ~3K tokens (input) + ~1K tokens (output) ≈ **$0.01**
+- **Fixer (예정)**: ~5K tokens ≈ **$0.02**
+- **총 예상 비용**: 약 **$0.09** (10분 비디오 1개)
+
+매우 저렴한 비용으로 고품질 자막 생성 가능!
 
 ---
 
@@ -246,10 +358,12 @@ paths:
   - [x] JSON 출력
   - [x] 테스트 코드
 
-- [ ] **Phase 2**: Analyzer 에이전트 구현
-  - [ ] 문맥 분석 (Claude API)
-  - [ ] 전문용어 추출
-  - [ ] 도메인 파악
+- [x] **Phase 2**: Analyzer 에이전트 구현
+  - [x] 문맥 분석 (Claude API)
+  - [x] 전문용어 추출
+  - [x] 도메인 파악
+  - [x] 오류 패턴 예측
+  - [x] 테스트 코드
 
 - [ ] **Phase 3**: Fixer 에이전트 구현
   - [ ] 오타 교정
